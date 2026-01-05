@@ -609,6 +609,8 @@ class FunnelArrow(QGraphicsPathItem):
         
     def _update_path(self):
         """깔때기 + L자 경로 그리기"""
+        from math import atan2, degrees, cos, sin, radians
+        
         path = QPainterPath()
         
         # 역삼각형 크기
@@ -616,22 +618,39 @@ class FunnelArrow(QGraphicsPathItem):
         funnel_height = 20
         bar_width = 20  # 수평선 길이
         
-        # 역삼각형 (깔때기) - 시작점 기준, 아래 방향
-        triangle_top_y = self._start.y()
-        triangle_bottom_y = self._start.y() + funnel_height
+        # 첫 번째 세그먼트 방향 계산 (시작점 → 꺾임점)
+        dx = self._elbow.x() - self._start.x()
+        dy = self._elbow.y() - self._start.y()
+        angle = degrees(atan2(dy, dx))  # 각도 계산
         
-        path.moveTo(self._start.x() - funnel_width / 2, triangle_top_y)
-        path.lineTo(self._start.x() + funnel_width / 2, triangle_top_y)
-        path.lineTo(self._start.x(), triangle_bottom_y)
-        path.closeSubpath()
+        # QTransform으로 역삼각형 회전
+        transform = QTransform()
+        transform.translate(self._start.x(), self._start.y())
+        transform.rotate(angle)
         
-        # 수평선 (깔때기 아래)
-        bar_y = triangle_bottom_y
-        path.moveTo(self._start.x() - bar_width / 2, bar_y)
-        path.lineTo(self._start.x() + bar_width / 2, bar_y)
+        # 역삼각형 (기본: 오른쪽 방향)
+        triangle = QPainterPath()
+        triangle.moveTo(0, -funnel_width / 2)
+        triangle.lineTo(0, funnel_width / 2)
+        triangle.lineTo(funnel_height, 0)
+        triangle.closeSubpath()
+        
+        # 수직선 (깔때기 옆)
+        bar = QPainterPath()
+        bar.moveTo(funnel_height, -bar_width / 2)
+        bar.lineTo(funnel_height, bar_width / 2)
+        
+        # 변환 적용
+        path.addPath(transform.map(triangle))
+        path.addPath(transform.map(bar))
+        
+        # 깔때기 끝 좌표 계산 (회전 적용)
+        angle_rad = radians(angle)
+        funnel_end_x = self._start.x() + funnel_height * cos(angle_rad)
+        funnel_end_y = self._start.y() + funnel_height * sin(angle_rad)
         
         # L자 선 (깔때기 끝 → 꺾임점 → 끝점)
-        path.moveTo(self._start.x(), bar_y)
+        path.moveTo(funnel_end_x, funnel_end_y)
         path.lineTo(self._elbow.x(), self._elbow.y())
         path.lineTo(self._end.x(), self._end.y())
         
@@ -654,6 +673,14 @@ class FunnelArrow(QGraphicsPathItem):
         stroker = QPainterPathStroker()
         stroker.setWidth(10)
         return stroker.createStroke(self.path())
+    
+    def cancel_attach(self, scene):
+        """사용하지 않지만 호환성을 위해 필요"""
+        pass
+    
+    def confirm_attach(self):
+        """사용하지 않지만 호환성을 위해 필요"""
+        pass
         
     def itemChange(self, change, value):
         if change == QGraphicsItem.GraphicsItemChange.ItemSelectedChange:
@@ -705,6 +732,8 @@ class FunnelArrowHorizontal(QGraphicsPathItem):
         
     def _update_path(self):
         """깔때기 + ㄱ자 경로 그리기"""
+        from math import atan2, degrees
+        
         path = QPainterPath()
         
         # 역삼각형 크기
@@ -712,22 +741,40 @@ class FunnelArrowHorizontal(QGraphicsPathItem):
         funnel_height = 20
         bar_width = 20  # 수평선 길이
         
-        # 역삼각형 (깔때기) - 시작점 기준, 오른쪽 방향
-        triangle_left_x = self._start.x()
-        triangle_right_x = self._start.x() + funnel_height
+        # 첫 번째 세그먼트 방향 계산 (시작점 → 꺾임점)
+        dx = self._elbow.x() - self._start.x()
+        dy = self._elbow.y() - self._start.y()
+        angle = degrees(atan2(dy, dx))  # 각도 계산
         
-        path.moveTo(triangle_left_x, self._start.y() - funnel_width / 2)
-        path.lineTo(triangle_left_x, self._start.y() + funnel_width / 2)
-        path.lineTo(triangle_right_x, self._start.y())
-        path.closeSubpath()
+        # QTransform으로 역삼각형 회전
+        transform = QTransform()
+        transform.translate(self._start.x(), self._start.y())
+        transform.rotate(angle)
+        
+        # 역삼각형 (기본: 오른쪽 방향)
+        triangle = QPainterPath()
+        triangle.moveTo(0, -funnel_width / 2)
+        triangle.lineTo(0, funnel_width / 2)
+        triangle.lineTo(funnel_height, 0)
+        triangle.closeSubpath()
         
         # 수직선 (깔때기 옆)
-        bar_x = triangle_right_x
-        path.moveTo(bar_x, self._start.y() - bar_width / 2)
-        path.lineTo(bar_x, self._start.y() + bar_width / 2)
+        bar = QPainterPath()
+        bar.moveTo(funnel_height, -bar_width / 2)
+        bar.lineTo(funnel_height, bar_width / 2)
+        
+        # 변환 적용
+        path.addPath(transform.map(triangle))
+        path.addPath(transform.map(bar))
+        
+        # 깔때기 끝 좌표 계산 (회전 적용)
+        from math import cos, sin, radians
+        angle_rad = radians(angle)
+        funnel_end_x = self._start.x() + funnel_height * cos(angle_rad)
+        funnel_end_y = self._start.y() + funnel_height * sin(angle_rad)
         
         # ㄱ자 선 (깔때기 끝 → 꺾임점 → 끝점)
-        path.moveTo(bar_x, self._start.y())
+        path.moveTo(funnel_end_x, funnel_end_y)
         path.lineTo(self._elbow.x(), self._elbow.y())
         path.lineTo(self._end.x(), self._end.y())
         
@@ -750,6 +797,14 @@ class FunnelArrowHorizontal(QGraphicsPathItem):
         stroker = QPainterPathStroker()
         stroker.setWidth(10)
         return stroker.createStroke(self.path())
+    
+    def cancel_attach(self, scene):
+        """사용하지 않지만 호환성을 위해 필요"""
+        pass
+    
+    def confirm_attach(self):
+        """사용하지 않지만 호환성을 위해 필요"""
+        pass
         
     def itemChange(self, change, value):
         if change == QGraphicsItem.GraphicsItemChange.ItemSelectedChange:
@@ -2115,7 +2170,7 @@ class FaultEditorWidget(QWidget):
         self._pending_press_pos = None
 
         # memo CREATE 종료 먼저 처리
-        if self._drag_mode == DragMode.CREATE and isinstance(self._drag_item, (MemoLine, MemoFreePath, ElbowArrow, ElbowArrowHorizontal, FunnelArrow)):
+        if self._drag_mode == DragMode.CREATE and isinstance(self._drag_item, (MemoLine, MemoFreePath, ElbowArrow, ElbowArrowHorizontal, FunnelArrow, FunnelArrowHorizontal)):
             self._end_edit()
             self._reset_mouse_drag()
             self.mark_dirty()
