@@ -463,6 +463,105 @@ class ElbowArrow(QGraphicsPathItem):
     def itemChange(self, change, value):
         if change == QGraphicsItem.GraphicsItemChange.ItemSelectedChange:
             self.setPen(self._selected_pen if value else self._normal_pen)
+        return super().itemChange(change, value)
+
+class ElbowArrowHorizontal(QGraphicsPathItem):
+    """수평으로 꺾인 화살표 지시선 (ㄱ자 모양)"""
+    def __init__(self, start: QPointF, number: int = 1):
+        super().__init__()
+        self.is_memo = True
+        self._start = start
+        self._elbow = start  # 꺾이는 지점
+        self._end = start    # 끝점
+        self.number = number  # 끝점 동그라미 안 숫자
+        
+        self._normal_pen = QPen(Qt.GlobalColor.red, 3)
+        self._selected_pen = QPen(QColor(255, 80, 80), 4)
+        self._selected_pen.setStyle(Qt.PenStyle.DashLine)
+        
+        self.setPen(self._normal_pen)
+        self.setFlags(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
+        
+        # 끝점 동그라미 + 숫자
+        self._end_circle = QGraphicsEllipseItem(-18, -18, 36, 36, self)
+        self._end_circle.setPen(QPen(Qt.GlobalColor.red, 3))
+        self._end_circle.setBrush(QBrush(Qt.GlobalColor.white))
+        self._end_circle.setZValue(1)
+        
+        self._number_text = QGraphicsSimpleTextItem(str(number), self)
+        self._number_text.setBrush(QBrush(Qt.GlobalColor.red))
+        self._number_text.setFont(QFont("Malgun Gothic", 15, QFont.Weight.Bold))
+        self._number_text.setZValue(2)
+        
+        self._update_path()
+        
+    def set_end(self, end: QPointF):
+        """끝점 설정 (자동으로 수평 꺾임 계산)"""
+        self._end = end
+        # 꺾임점: start의 y좌표, end의 x좌표
+        self._elbow = QPointF(self._end.x(), self._start.y())
+        self._update_path()
+        
+    def set_number(self, number: int):
+        """동그라미 안 숫자 설정"""
+        self.number = number
+        self._number_text.setText(str(number))
+        self._update_number_position()
+        
+    def _update_path(self):
+        """ㄱ자 경로 + 화살표 그리기 (시작점에 화살표)"""
+        path = QPainterPath(self._start)
+        path.lineTo(self._elbow)
+        path.lineTo(self._end)
+        
+        # 화살표 추가 (시작점에) - 첫 번째 선분 방향
+        arrow_size = 8
+        dx = self._elbow.x() - self._start.x()
+        dy = self._elbow.y() - self._start.y()
+        length = math.hypot(dx, dy)
+        
+        if length > 0.1:
+            # 정규화된 방향 벡터
+            ux = dx / length
+            uy = dy / length
+            
+            # 화살촉 두 점 (시작점에서)
+            arrow_p1 = QPointF(
+                self._start.x() + arrow_size * ux - arrow_size * 0.5 * uy,
+                self._start.y() + arrow_size * uy + arrow_size * 0.5 * ux
+            )
+            arrow_p2 = QPointF(
+                self._start.x() + arrow_size * ux + arrow_size * 0.5 * uy,
+                self._start.y() + arrow_size * uy - arrow_size * 0.5 * ux
+            )
+            
+            path.moveTo(arrow_p1)
+            path.lineTo(self._start)
+            path.lineTo(arrow_p2)
+        
+        self.setPath(path)
+        
+        # 끝점 동그라미 위치 업데이트
+        self._end_circle.setPos(self._end)
+        self._update_number_position()
+        
+    def _update_number_position(self):
+        """동그라미 안 숫자 중앙 정렬"""
+        rect = self._number_text.boundingRect()
+        self._number_text.setPos(
+            self._end.x() - rect.width() / 2,
+            self._end.y() - rect.height() / 2
+        )
+        
+    def shape(self):
+        """선택 영역을 넓게"""
+        stroker = QPainterPathStroker()
+        stroker.setWidth(10)
+        return stroker.createStroke(self.path())
+        
+    def itemChange(self, change, value):
+        if change == QGraphicsItem.GraphicsItemChange.ItemSelectedChange:
+            self.setPen(self._selected_pen if value else self._normal_pen)
         return super().itemChange(change, value)       
                               
 # =====================================================
@@ -1569,6 +1668,39 @@ class FaultEditorWidget(QWidget):
         p.end()
         return pix
 
+    def _icon_elbow_arrow_horizontal(self):
+        pix = QPixmap(48, 48)
+        pix.fill(Qt.GlobalColor.transparent)
+        p = QPainter(pix)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.setPen(QPen(Qt.GlobalColor.red, 2))
+        
+        # ㄱ자 형태 그리기 (수평 먼저)
+        path = QPainterPath(QPointF(14, 14))
+        path.lineTo(30, 14)  # 수평
+        path.lineTo(30, 34)  # 수직
+        p.drawPath(path)
+        
+        # 화살표 시작점에 그리기
+        arrow = QPolygonF([
+            QPointF(14, 14),
+            QPointF(20, 14),
+            QPointF(17, 11)
+        ])
+        p.setBrush(QBrush(Qt.GlobalColor.red))
+        p.drawPolygon(arrow)
+        
+        # 끝점 동그라미
+        p.setBrush(QBrush(Qt.GlobalColor.white))
+        p.drawEllipse(QPointF(30, 34), 6, 6)
+        
+        # 숫자
+        p.setFont(QFont("Malgun Gothic", 8, QFont.Weight.Bold))
+        p.drawText(QRectF(24, 28, 12, 12), Qt.AlignmentFlag.AlignCenter, "1")
+        
+        p.end()
+        return pix
+
     def _is_basic_shape(self):
         return self.current_tool in ("circle", "rect", "tri", "s", "text")
 
@@ -1612,6 +1744,11 @@ class FaultEditorWidget(QWidget):
             return
 
         if self._drag_mode == DragMode.CREATE and isinstance(self._drag_item, ElbowArrow):
+            scene_pos = self.view.mapToScene(event.position().toPoint())
+            self._drag_item.set_end(scene_pos)
+            return
+
+        if self._drag_mode == DragMode.CREATE and isinstance(self._drag_item, ElbowArrowHorizontal):
             scene_pos = self.view.mapToScene(event.position().toPoint())
             self._drag_item.set_end(scene_pos)
             return
@@ -1669,6 +1806,15 @@ class FaultEditorWidget(QWidget):
                 self._end_edit()
                 self._reset_mouse_drag()
                 return
+
+        if isinstance(self._drag_item, ElbowArrowHorizontal):
+            # 끝점 설정 (이미 마우스 이동 중 업데이트됨)
+            path_rect = self._drag_item.path().boundingRect()
+            if path_rect.width() < MIN_MEMO_LINE_LEN and path_rect.height() < MIN_MEMO_LINE_LEN:
+                self.scene.removeItem(self._drag_item)
+                self._end_edit()
+                self._reset_mouse_drag()
+                return
               
         if self._drag_mode in (DragMode.MOVE, DragMode.MOVE_ANCHOR):
             item = self._drag_item
@@ -1692,7 +1838,7 @@ class FaultEditorWidget(QWidget):
         self._pending_press_pos = None
 
         # memo CREATE 종료 먼저 처리
-        if self._drag_mode == DragMode.CREATE and isinstance(self._drag_item, (MemoLine, MemoFreePath, ElbowArrow)):
+        if self._drag_mode == DragMode.CREATE and isinstance(self._drag_item, (MemoLine, MemoFreePath, ElbowArrow, ElbowArrowHorizontal)):
             self._end_edit()
             self._reset_mouse_drag()
             self.mark_dirty()
@@ -1746,7 +1892,7 @@ class FaultEditorWidget(QWidget):
                     
         # ... _on_mouse_press 내부, scene_pos 만든 직후에 추가
         raw = self.scene.itemAt(scene_pos, QTransform())
-        if isinstance(raw, (MemoLine, MemoFreePath, ElbowArrow)):
+        if isinstance(raw, (MemoLine, MemoFreePath, ElbowArrow, ElbowArrowHorizontal)):
             mods = event.modifiers()
 
             # 단일 선택 동작 (Ctrl/Shift 없으면 기존 선택 해제 후 선택)
@@ -1762,7 +1908,7 @@ class FaultEditorWidget(QWidget):
 
         hit = self._find_shape_at(scene_pos)
         # memo 도형은 Qt 기본 선택 처리에 맡긴다
-        if isinstance(hit, (MemoLine, MemoFreePath, ElbowArrow)):
+        if isinstance(hit, (MemoLine, MemoFreePath, ElbowArrow, ElbowArrowHorizontal)):
             return False        
         # ---- 단일 선택 강제 (영역선택 모드가 아닐 때) ----
         if self._edit_mode != EditMode.AREA_SELECT:
@@ -1813,6 +1959,20 @@ class FaultEditorWidget(QWidget):
                 self._drag_mode = DragMode.CREATE
                 self._press_pos = scene_pos
                 self._drag_item = ElbowArrow(scene_pos, self._next_elbow_arrow_index)
+                self._next_elbow_arrow_index += 1
+                self._drag_line = None
+                self.scene.addItem(self._drag_item)
+                return True
+
+            if self.current_tool == "elbow_arrow_h":
+                self._press_timer.stop()
+                self._pressing = False
+                self._pending_press_pos = None
+
+                self._begin_edit()
+                self._drag_mode = DragMode.CREATE
+                self._press_pos = scene_pos
+                self._drag_item = ElbowArrowHorizontal(scene_pos, self._next_elbow_arrow_index)
                 self._next_elbow_arrow_index += 1
                 self._drag_line = None
                 self.scene.addItem(self._drag_item)
@@ -2049,7 +2209,8 @@ class FaultEditorWidget(QWidget):
         # ===== 메모 / 드로잉 =====
         self._add_shape("memo_line", "직선", self._icon_line())
         self._add_shape("memo_free", "자유곡선", self._icon_free())
-        self._add_shape("elbow_arrow", "꺾인 화살표", self._icon_elbow_arrow())
+        self._add_shape("elbow_arrow", "꺾인 화살표(수직)", self._icon_elbow_arrow())
+        self._add_shape("elbow_arrow_h", "꺾인 화살표(수평)", self._icon_elbow_arrow_horizontal())
 
         self._add_divider_item()
 
