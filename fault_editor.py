@@ -381,7 +381,10 @@ class ElbowArrow(QGraphicsPathItem):
         self._selected_pen.setStyle(Qt.PenStyle.DashLine)
         
         self.setPen(self._normal_pen)
-        self.setFlags(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
+        self.setFlags(
+            QGraphicsItem.GraphicsItemFlag.ItemIsSelectable |
+            QGraphicsItem.GraphicsItemFlag.ItemIsMovable
+        )
         
         # 끝점 동그라미 + 숫자
         self._end_circle = QGraphicsEllipseItem(-18, -18, 36, 36, self)
@@ -480,7 +483,10 @@ class ElbowArrowHorizontal(QGraphicsPathItem):
         self._selected_pen.setStyle(Qt.PenStyle.DashLine)
         
         self.setPen(self._normal_pen)
-        self.setFlags(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
+        self.setFlags(
+            QGraphicsItem.GraphicsItemFlag.ItemIsSelectable |
+            QGraphicsItem.GraphicsItemFlag.ItemIsMovable
+        )
         
         # 끝점 동그라미 + 숫자
         self._end_circle = QGraphicsEllipseItem(-18, -18, 36, 36, self)
@@ -579,7 +585,10 @@ class FunnelArrow(QGraphicsPathItem):
         self._selected_pen.setStyle(Qt.PenStyle.DashLine)
         
         self.setPen(self._normal_pen)
-        self.setFlags(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
+        self.setFlags(
+            QGraphicsItem.GraphicsItemFlag.ItemIsSelectable |
+            QGraphicsItem.GraphicsItemFlag.ItemIsMovable
+        )
         
         # 끝점 동그라미 + 숫자
         self._end_circle = QGraphicsEllipseItem(-18, -18, 36, 36, self)
@@ -702,7 +711,10 @@ class FunnelArrowHorizontal(QGraphicsPathItem):
         self._selected_pen.setStyle(Qt.PenStyle.DashLine)
         
         self.setPen(self._normal_pen)
-        self.setFlags(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
+        self.setFlags(
+            QGraphicsItem.GraphicsItemFlag.ItemIsSelectable |
+            QGraphicsItem.GraphicsItemFlag.ItemIsMovable
+        )
         
         # 끝점 동그라미 + 숫자
         self._end_circle = QGraphicsEllipseItem(-18, -18, 36, 36, self)
