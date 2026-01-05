@@ -376,22 +376,22 @@ class ElbowArrow(QGraphicsPathItem):
         self._end = start    # 끝점
         self.number = number  # 끝점 동그라미 안 숫자
         
-        self._normal_pen = QPen(Qt.GlobalColor.red, 2)
-        self._selected_pen = QPen(QColor(255, 80, 80), 3)
+        self._normal_pen = QPen(Qt.GlobalColor.red, 3)
+        self._selected_pen = QPen(QColor(255, 80, 80), 4)
         self._selected_pen.setStyle(Qt.PenStyle.DashLine)
         
         self.setPen(self._normal_pen)
         self.setFlags(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
         
         # 끝점 동그라미 + 숫자
-        self._end_circle = QGraphicsEllipseItem(-10, -10, 20, 20, self)
-        self._end_circle.setPen(QPen(Qt.GlobalColor.red, 2))
+        self._end_circle = QGraphicsEllipseItem(-18, -18, 36, 36, self)
+        self._end_circle.setPen(QPen(Qt.GlobalColor.red, 3))
         self._end_circle.setBrush(QBrush(Qt.GlobalColor.white))
         self._end_circle.setZValue(1)
         
         self._number_text = QGraphicsSimpleTextItem(str(number), self)
         self._number_text.setBrush(QBrush(Qt.GlobalColor.red))
-        self._number_text.setFont(QFont("Malgun Gothic", 10, QFont.Weight.Bold))
+        self._number_text.setFont(QFont("Malgun Gothic", 15, QFont.Weight.Bold))
         self._number_text.setZValue(2)
         
         self._update_path()
