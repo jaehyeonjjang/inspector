@@ -416,7 +416,7 @@ class ElbowArrow(QGraphicsPathItem):
         path.lineTo(self._end)
         
         # 화살표 추가 (시작점에) - 첫 번째 선분 방향
-        arrow_size = 8
+        arrow_size = 15
         dx = self._elbow.x() - self._start.x()
         dy = self._elbow.y() - self._start.y()
         length = math.hypot(dx, dy)
@@ -515,7 +515,7 @@ class ElbowArrowHorizontal(QGraphicsPathItem):
         path.lineTo(self._end)
         
         # 화살표 추가 (시작점에) - 첫 번째 선분 방향
-        arrow_size = 8
+        arrow_size = 15
         dx = self._elbow.x() - self._start.x()
         dy = self._elbow.y() - self._start.y()
         length = math.hypot(dx, dy)
@@ -538,6 +538,198 @@ class ElbowArrowHorizontal(QGraphicsPathItem):
             path.moveTo(arrow_p1)
             path.lineTo(self._start)
             path.lineTo(arrow_p2)
+        
+        self.setPath(path)
+        
+        # 끝점 동그라미 위치 업데이트
+        self._end_circle.setPos(self._end)
+        self._update_number_position()
+        
+    def _update_number_position(self):
+        """동그라미 안 숫자 중앙 정렬"""
+        rect = self._number_text.boundingRect()
+        self._number_text.setPos(
+            self._end.x() - rect.width() / 2,
+            self._end.y() - rect.height() / 2
+        )
+        
+    def shape(self):
+        """선택 영역을 넓게"""
+        stroker = QPainterPathStroker()
+        stroker.setWidth(10)
+        return stroker.createStroke(self.path())
+        
+    def itemChange(self, change, value):
+        if change == QGraphicsItem.GraphicsItemChange.ItemSelectedChange:
+            self.setPen(self._selected_pen if value else self._normal_pen)
+        return super().itemChange(change, value)
+
+class FunnelArrow(QGraphicsPathItem):
+    """깔때기 모양 화살표 지시선 (수직으로 꺾임)"""
+    def __init__(self, start: QPointF, number: int = 1):
+        super().__init__()
+        self.is_memo = True
+        self._start = start
+        self._elbow = start  # 꺾이는 지점
+        self._end = start    # 끝점
+        self.number = number  # 끝점 동그라미 안 숫자
+        
+        self._normal_pen = QPen(Qt.GlobalColor.red, 3)
+        self._selected_pen = QPen(QColor(255, 80, 80), 4)
+        self._selected_pen.setStyle(Qt.PenStyle.DashLine)
+        
+        self.setPen(self._normal_pen)
+        self.setFlags(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
+        
+        # 끝점 동그라미 + 숫자
+        self._end_circle = QGraphicsEllipseItem(-18, -18, 36, 36, self)
+        self._end_circle.setPen(QPen(Qt.GlobalColor.red, 3))
+        self._end_circle.setBrush(QBrush(Qt.GlobalColor.white))
+        self._end_circle.setZValue(1)
+        
+        self._number_text = QGraphicsSimpleTextItem(str(number), self)
+        self._number_text.setBrush(QBrush(Qt.GlobalColor.red))
+        self._number_text.setFont(QFont("Malgun Gothic", 15, QFont.Weight.Bold))
+        self._number_text.setZValue(2)
+        
+        self._update_path()
+        
+    def set_end(self, end: QPointF):
+        """끝점 설정 (자동으로 수직 꺾임 계산)"""
+        self._end = end
+        # 꺾임점: start의 x좌표, end의 y좌표
+        self._elbow = QPointF(self._start.x(), self._end.y())
+        self._update_path()
+        
+    def set_number(self, number: int):
+        """동그라미 안 숫자 설정"""
+        self.number = number
+        self._number_text.setText(str(number))
+        self._update_number_position()
+        
+    def _update_path(self):
+        """깔때기 + L자 경로 그리기"""
+        path = QPainterPath()
+        
+        # 역삼각형 크기
+        funnel_width = 30
+        funnel_height = 20
+        bar_width = 20  # 수평선 길이
+        
+        # 역삼각형 (깔때기) - 시작점 기준, 아래 방향
+        triangle_top_y = self._start.y()
+        triangle_bottom_y = self._start.y() + funnel_height
+        
+        path.moveTo(self._start.x() - funnel_width / 2, triangle_top_y)
+        path.lineTo(self._start.x() + funnel_width / 2, triangle_top_y)
+        path.lineTo(self._start.x(), triangle_bottom_y)
+        path.closeSubpath()
+        
+        # 수평선 (깔때기 아래)
+        bar_y = triangle_bottom_y
+        path.moveTo(self._start.x() - bar_width / 2, bar_y)
+        path.lineTo(self._start.x() + bar_width / 2, bar_y)
+        
+        # L자 선 (깔때기 끝 → 꺾임점 → 끝점)
+        path.moveTo(self._start.x(), bar_y)
+        path.lineTo(self._elbow.x(), self._elbow.y())
+        path.lineTo(self._end.x(), self._end.y())
+        
+        self.setPath(path)
+        
+        # 끝점 동그라미 위치 업데이트
+        self._end_circle.setPos(self._end)
+        self._update_number_position()
+        
+    def _update_number_position(self):
+        """동그라미 안 숫자 중앙 정렬"""
+        rect = self._number_text.boundingRect()
+        self._number_text.setPos(
+            self._end.x() - rect.width() / 2,
+            self._end.y() - rect.height() / 2
+        )
+        
+    def shape(self):
+        """선택 영역을 넓게"""
+        stroker = QPainterPathStroker()
+        stroker.setWidth(10)
+        return stroker.createStroke(self.path())
+        
+    def itemChange(self, change, value):
+        if change == QGraphicsItem.GraphicsItemChange.ItemSelectedChange:
+            self.setPen(self._selected_pen if value else self._normal_pen)
+        return super().itemChange(change, value)
+
+class FunnelArrowHorizontal(QGraphicsPathItem):
+    """깔때기 모양 화살표 지시선 (수평으로 꺾임)"""
+    def __init__(self, start: QPointF, number: int = 1):
+        super().__init__()
+        self.is_memo = True
+        self._start = start
+        self._elbow = start  # 꺾이는 지점
+        self._end = start    # 끝점
+        self.number = number  # 끝점 동그라미 안 숫자
+        
+        self._normal_pen = QPen(Qt.GlobalColor.red, 3)
+        self._selected_pen = QPen(QColor(255, 80, 80), 4)
+        self._selected_pen.setStyle(Qt.PenStyle.DashLine)
+        
+        self.setPen(self._normal_pen)
+        self.setFlags(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
+        
+        # 끝점 동그라미 + 숫자
+        self._end_circle = QGraphicsEllipseItem(-18, -18, 36, 36, self)
+        self._end_circle.setPen(QPen(Qt.GlobalColor.red, 3))
+        self._end_circle.setBrush(QBrush(Qt.GlobalColor.white))
+        self._end_circle.setZValue(1)
+        
+        self._number_text = QGraphicsSimpleTextItem(str(number), self)
+        self._number_text.setBrush(QBrush(Qt.GlobalColor.red))
+        self._number_text.setFont(QFont("Malgun Gothic", 15, QFont.Weight.Bold))
+        self._number_text.setZValue(2)
+        
+        self._update_path()
+        
+    def set_end(self, end: QPointF):
+        """끝점 설정 (자동으로 수평 꺾임 계산)"""
+        self._end = end
+        # 꺾임점: end의 x좌표, start의 y좌표
+        self._elbow = QPointF(self._end.x(), self._start.y())
+        self._update_path()
+        
+    def set_number(self, number: int):
+        """동그라미 안 숫자 설정"""
+        self.number = number
+        self._number_text.setText(str(number))
+        self._update_number_position()
+        
+    def _update_path(self):
+        """깔때기 + ㄱ자 경로 그리기"""
+        path = QPainterPath()
+        
+        # 역삼각형 크기
+        funnel_width = 30
+        funnel_height = 20
+        bar_width = 20  # 수평선 길이
+        
+        # 역삼각형 (깔때기) - 시작점 기준, 오른쪽 방향
+        triangle_left_x = self._start.x()
+        triangle_right_x = self._start.x() + funnel_height
+        
+        path.moveTo(triangle_left_x, self._start.y() - funnel_width / 2)
+        path.lineTo(triangle_left_x, self._start.y() + funnel_width / 2)
+        path.lineTo(triangle_right_x, self._start.y())
+        path.closeSubpath()
+        
+        # 수직선 (깔때기 옆)
+        bar_x = triangle_right_x
+        path.moveTo(bar_x, self._start.y() - bar_width / 2)
+        path.lineTo(bar_x, self._start.y() + bar_width / 2)
+        
+        # ㄱ자 선 (깔때기 끝 → 꺾임점 → 끝점)
+        path.moveTo(bar_x, self._start.y())
+        path.lineTo(self._elbow.x(), self._elbow.y())
+        path.lineTo(self._end.x(), self._end.y())
         
         self.setPath(path)
         
@@ -1701,6 +1893,72 @@ class FaultEditorWidget(QWidget):
         p.end()
         return pix
 
+    def _icon_funnel_arrow(self):
+        pix = QPixmap(48, 48)
+        pix.fill(Qt.GlobalColor.transparent)
+        p = QPainter(pix)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.setPen(QPen(Qt.GlobalColor.red, 2))
+        
+        # 역삼각형 (깔때기)
+        triangle = QPolygonF([
+            QPointF(14, 10),
+            QPointF(34, 10),
+            QPointF(24, 22)
+        ])
+        p.drawPolygon(triangle)
+        
+        # 수평선
+        p.drawLine(19, 22, 29, 22)
+        
+        # L자 선 (수직으로 꺾임)
+        p.drawLine(24, 22, 24, 30)  # 수직
+        p.drawLine(24, 30, 36, 30)  # 수평
+        
+        # 끝점 동그라미
+        p.setBrush(QBrush(Qt.GlobalColor.white))
+        p.drawEllipse(QPointF(36, 30), 5, 5)
+        
+        # 숫자
+        p.setFont(QFont("Malgun Gothic", 7, QFont.Weight.Bold))
+        p.drawText(QRectF(31, 25, 10, 10), Qt.AlignmentFlag.AlignCenter, "1")
+        
+        p.end()
+        return pix
+
+    def _icon_funnel_arrow_horizontal(self):
+        pix = QPixmap(48, 48)
+        pix.fill(Qt.GlobalColor.transparent)
+        p = QPainter(pix)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.setPen(QPen(Qt.GlobalColor.red, 2))
+        
+        # 역삼각형 (깔때기) - 오른쪽 향함
+        triangle = QPolygonF([
+            QPointF(10, 14),
+            QPointF(10, 34),
+            QPointF(22, 24)
+        ])
+        p.drawPolygon(triangle)
+        
+        # 수직선
+        p.drawLine(22, 19, 22, 29)
+        
+        # ㄱ자 선 (수평으로 꺾임)
+        p.drawLine(22, 24, 30, 24)  # 수평
+        p.drawLine(30, 24, 30, 36)  # 수직
+        
+        # 끝점 동그라미
+        p.setBrush(QBrush(Qt.GlobalColor.white))
+        p.drawEllipse(QPointF(30, 36), 5, 5)
+        
+        # 숫자
+        p.setFont(QFont("Malgun Gothic", 7, QFont.Weight.Bold))
+        p.drawText(QRectF(25, 31, 10, 10), Qt.AlignmentFlag.AlignCenter, "1")
+        
+        p.end()
+        return pix
+
     def _is_basic_shape(self):
         return self.current_tool in ("circle", "rect", "tri", "s", "text")
 
@@ -1749,6 +2007,16 @@ class FaultEditorWidget(QWidget):
             return
 
         if self._drag_mode == DragMode.CREATE and isinstance(self._drag_item, ElbowArrowHorizontal):
+            scene_pos = self.view.mapToScene(event.position().toPoint())
+            self._drag_item.set_end(scene_pos)
+            return
+
+        if self._drag_mode == DragMode.CREATE and isinstance(self._drag_item, FunnelArrow):
+            scene_pos = self.view.mapToScene(event.position().toPoint())
+            self._drag_item.set_end(scene_pos)
+            return
+
+        if self._drag_mode == DragMode.CREATE and isinstance(self._drag_item, FunnelArrowHorizontal):
             scene_pos = self.view.mapToScene(event.position().toPoint())
             self._drag_item.set_end(scene_pos)
             return
@@ -1815,6 +2083,15 @@ class FaultEditorWidget(QWidget):
                 self._end_edit()
                 self._reset_mouse_drag()
                 return
+
+        if isinstance(self._drag_item, (FunnelArrow, FunnelArrowHorizontal)):
+            # 끝점 설정 (이미 마우스 이동 중 업데이트됨)
+            path_rect = self._drag_item.path().boundingRect()
+            if path_rect.width() < MIN_MEMO_LINE_LEN and path_rect.height() < MIN_MEMO_LINE_LEN:
+                self.scene.removeItem(self._drag_item)
+                self._end_edit()
+                self._reset_mouse_drag()
+                return
               
         if self._drag_mode in (DragMode.MOVE, DragMode.MOVE_ANCHOR):
             item = self._drag_item
@@ -1838,7 +2115,7 @@ class FaultEditorWidget(QWidget):
         self._pending_press_pos = None
 
         # memo CREATE 종료 먼저 처리
-        if self._drag_mode == DragMode.CREATE and isinstance(self._drag_item, (MemoLine, MemoFreePath, ElbowArrow, ElbowArrowHorizontal)):
+        if self._drag_mode == DragMode.CREATE and isinstance(self._drag_item, (MemoLine, MemoFreePath, ElbowArrow, ElbowArrowHorizontal, FunnelArrow)):
             self._end_edit()
             self._reset_mouse_drag()
             self.mark_dirty()
@@ -1892,7 +2169,7 @@ class FaultEditorWidget(QWidget):
                     
         # ... _on_mouse_press 내부, scene_pos 만든 직후에 추가
         raw = self.scene.itemAt(scene_pos, QTransform())
-        if isinstance(raw, (MemoLine, MemoFreePath, ElbowArrow, ElbowArrowHorizontal)):
+        if isinstance(raw, (MemoLine, MemoFreePath, ElbowArrow, ElbowArrowHorizontal, FunnelArrow, FunnelArrowHorizontal)):
             mods = event.modifiers()
 
             # 단일 선택 동작 (Ctrl/Shift 없으면 기존 선택 해제 후 선택)
@@ -1908,7 +2185,7 @@ class FaultEditorWidget(QWidget):
 
         hit = self._find_shape_at(scene_pos)
         # memo 도형은 Qt 기본 선택 처리에 맡긴다
-        if isinstance(hit, (MemoLine, MemoFreePath, ElbowArrow, ElbowArrowHorizontal)):
+        if isinstance(hit, (MemoLine, MemoFreePath, ElbowArrow, ElbowArrowHorizontal, FunnelArrow, FunnelArrowHorizontal)):
             return False        
         # ---- 단일 선택 강제 (영역선택 모드가 아닐 때) ----
         if self._edit_mode != EditMode.AREA_SELECT:
@@ -1973,6 +2250,34 @@ class FaultEditorWidget(QWidget):
                 self._drag_mode = DragMode.CREATE
                 self._press_pos = scene_pos
                 self._drag_item = ElbowArrowHorizontal(scene_pos, self._next_elbow_arrow_index)
+                self._next_elbow_arrow_index += 1
+                self._drag_line = None
+                self.scene.addItem(self._drag_item)
+                return True
+
+            if self.current_tool == "funnel_arrow":
+                self._press_timer.stop()
+                self._pressing = False
+                self._pending_press_pos = None
+
+                self._begin_edit()
+                self._drag_mode = DragMode.CREATE
+                self._press_pos = scene_pos
+                self._drag_item = FunnelArrow(scene_pos, self._next_elbow_arrow_index)
+                self._next_elbow_arrow_index += 1
+                self._drag_line = None
+                self.scene.addItem(self._drag_item)
+                return True
+
+            if self.current_tool == "funnel_arrow_h":
+                self._press_timer.stop()
+                self._pressing = False
+                self._pending_press_pos = None
+
+                self._begin_edit()
+                self._drag_mode = DragMode.CREATE
+                self._press_pos = scene_pos
+                self._drag_item = FunnelArrowHorizontal(scene_pos, self._next_elbow_arrow_index)
                 self._next_elbow_arrow_index += 1
                 self._drag_line = None
                 self.scene.addItem(self._drag_item)
@@ -2209,8 +2514,10 @@ class FaultEditorWidget(QWidget):
         # ===== 메모 / 드로잉 =====
         self._add_shape("memo_line", "직선", self._icon_line())
         self._add_shape("memo_free", "자유곡선", self._icon_free())
-        self._add_shape("elbow_arrow", "꺾인 화살표(수직)", self._icon_elbow_arrow())
-        self._add_shape("elbow_arrow_h", "꺾인 화살표(수평)", self._icon_elbow_arrow_horizontal())
+        self._add_shape("elbow_arrow", "세로 화살표", self._icon_elbow_arrow())
+        self._add_shape("elbow_arrow_h", "가로 화살표", self._icon_elbow_arrow_horizontal())
+        self._add_shape("funnel_arrow", "깔때기(세로)", self._icon_funnel_arrow())
+        self._add_shape("funnel_arrow_h", "깔때기(가로)", self._icon_funnel_arrow_horizontal())
 
         self._add_divider_item()
 
